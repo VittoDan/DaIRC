@@ -1,0 +1,85 @@
+<html>
+
+<head>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.29.2/cytoscape.min.js"
+		integrity="sha512-yi5TwB0WBpzqlJXNLURNMtpFXJt4yxJhkOG8yqkVQYWhfMkAoDF93rZ/KjfoN1gADGr5uKXvr5/Bw6CC03YWpA=="
+		crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+	<div id="test" style="display:flex;"></div>
+	<div id="item" style="width: 20em; height: 20em;"></div>
+	<div id="test" style="display:flex;">
+		<button id="add">+</button>
+	</div>
+</body>
+
+</html>
+<script>
+	var cy = cytoscape({
+		container: document.getElementById('item'), // container to render in
+		style: [ // the stylesheet for the graph
+			{
+				selector: 'node',
+				style: {
+					'label': 'data(label)',
+				}
+			}
+		],
+	});
+	let options = {
+		name: 'random',
+		fit: true, // whether to fit to viewport
+		padding: 30, // fit padding
+		boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
+		animate: false, // whether to transition the node positions
+		animationDuration: 500, // duration of animation in ms if enabled
+		animationEasing: undefined, // easing of animation if enabled
+		animateFilter: function (node, i) { return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
+		ready: undefined, // callback on layoutready
+		stop: undefined, // callback on layoutstop
+		transform: function (node, position) { return position; } // transform a given node position. Useful for changing flow direction in discrete layouts 
+	};
+
+
+	var PIDS = []
+	const socket = new WebSocket("ws://localhost:9090");
+	const return_socket = new WebSocket("ws://localhost:9091");
+	
+	socket.addEventListener("message", (event) => {
+
+		if (event.data) {
+			let JSONData = JSON.parse(event.data);
+			if (!JSONData.action) {
+				if (PIDS.includes(JSONData.PID)) {
+				} else {
+					PIDS.push(JSONData.PID);
+					cy.add({
+						group: 'nodes',
+
+						data: { id: JSONData.PID, label: JSONData.PID }
+					});
+
+					cy.layout(options).run();
+
+				}
+			}
+
+		}
+		//document.getElementById("test").innerHTML+=event.data + "<br>";
+	});
+
+	document.getElementById("add").addEventListener("click", () => {
+		let msg = { "action": "add", "agentType":"agent1" }
+		console.log("test");
+		socket.send(JSON.stringify(msg));
+		return_socket.send("agent1");
+
+	});
+</script>
+
+<style>
+	.gridsplit {
+		width: 100%;
+	}
+</style>

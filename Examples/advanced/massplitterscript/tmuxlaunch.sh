@@ -5,12 +5,14 @@ PROLOG="$SICSTUS_HOME/bin/sicstus"
 DALI_HOME="./src"
 BUILD_HOME="./build"
 tmux_session="agents_session"
-
+AGENTPIPE=/tmp/agentpipe
 # Create a new tmux session with a single window
 tmux new-session -d -s $tmux_session -n "main"
 
 # Launch agents in separate panes within the same tmux window
 first_pane=true
+
+mkfifo $AGENTPIPE
 for agent_filename in $BUILD_HOME/*
 do
     agent_base="${agent_filename##*/}"
@@ -31,8 +33,12 @@ done
 
 # Create a new pane for the user instance script
 tmux split-window -t $tmux_session -v "/bin/bash -c 'Examples/advanced/massplitterscript/userinstance.sh; echo Press Enter to close; read'"
-tmux split-window -t $tmux_session -v "nc -l localhost 3010; read"
 tmux select-layout -t $tmux_session tiled
 
 # Attach to the tmux session
 tmux attach -t $tmux_session
+
+while true; do
+    read -r command < $AGENTPIPE
+    tmux send-keys -t $tmux_session "$command" C-m
+done

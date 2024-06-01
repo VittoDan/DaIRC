@@ -6,4 +6,10 @@ while getopts "b" opt; do
         ;;
     esac
 done
-docker run --hostname "test" -it dalitest1:latest
+docker run --hostname "test" \
+ -p 127.0.0.1:8080:8080\
+ -p 127.0.0.1:9090:9090\
+ -p 127.0.0.1:9091:9091\
+ -p 127.0.0.1:9001:9001\
+ -p 127.0.0.1:1337:1337\
+ -it dalitest1:latest

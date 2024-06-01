@@ -16,6 +16,6 @@ COPY . /home/ubuntu/DALI
 WORKDIR /home/ubuntu/DALI
 ADD windowlayout.sh /home/ubuntu
 RUN chmod +x /home/ubuntu/windowlayout.sh
-EXPOSE 8000
-EXPOSE 3010
+
+
 CMD ["/home/ubuntu/windowlayout.sh"]

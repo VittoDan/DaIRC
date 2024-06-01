@@ -1,3 +1,5 @@
 Dockerfile
 DALI/build/*
 DALI/Examples/advanced/work/*
+DALI/Examples/advanced/node/nodeserver/node_modules/*
+DALI/Examples/advanced/node/nodeserver/package_lock.json
