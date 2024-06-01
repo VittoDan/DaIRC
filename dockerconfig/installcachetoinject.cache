@@ -1,0 +1,6 @@
+installdir='/usr/local/sicstus4.9.0'                                                                                                                       
+sitename='gm'                                                                                                                                              
+licensecode='747a-cmvr-hp7a-aaa7-adcd'                                                                                                                     
+expires='20240611'                                                                                                                                         
+prebuilt='yes'                                                                                                                                       
+default_perl='/usr/bin/perl'
