@@ -8,7 +8,8 @@ tmux_session="agents_session"
 AGENTPIPE=/tmp/agentpipe
 # Create a new tmux session with a single window
 tmux new-session -d -s $tmux_session -n "main"
-
+tmux split-window -t $tmux_session -v "/bin/bash -c 'Examples/advanced/massplitterscript/socketlaunch.sh; echo Press Enter to close; read'"
+tmux split-window -t $tmux_session -v "/bin/bash -c 'Examples/advanced/massplitterscript/nodeserver.sh ; echo Press Enter to close; read'"
 # Launch agents in separate panes within the same tmux window
 first_pane=true
 

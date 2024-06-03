@@ -48,7 +48,7 @@ webstoprolog.on('request', function (request) {
    var connection = request.accept(null, request.origin);
    connection.on('message', function (message) {
       const client = new net.Socket();
-      client.connect(TOWARDS_PROLOG_SOCKET, '0.0.0.0', () => {
+      client.connect(TOWARDS_PROLOG_SOCKET, '127.0.0.1', () => {
          client.write(message.utf8Data+'.')
          client.end();
       });
