@@ -19,7 +19,7 @@ handle_request(T,A) :-
     (T = 'agent1' ->
         (mutdict_get(A, 'agent1', L) ->
             NV is L + 1,
-            mutdict_put(A, 'agent1', NV),
+            mutdict_put(A, 'agent1', NV)
         ;
             NV = 1,
             mutdict_put(A, 'agent1', NV)
@@ -29,7 +29,7 @@ handle_request(T,A) :-
         atom_concat('./agent_creation_trigger.sh ', 'agentType1 ', O),
         int_to_atom(V,W),
         atom_concat(O, W, O2),
-        process_create(path(sh), ['-c', [O2]], [wait(exit(0))]),
+        process_create(path(sh), ['-c', [O2]], [wait(exit(0))])
     ;
         set_prolog_flag(double_quotes, atom),
         atom_concat('./agent_creation_trigger.sh ', 'test ', O),

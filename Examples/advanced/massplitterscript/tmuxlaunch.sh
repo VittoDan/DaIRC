@@ -39,7 +39,7 @@ tmux select-layout -t $tmux_session tiled
 # Attach to the tmux session
 tmux attach -t $tmux_session
 
-while true; do
-    read -r command < $AGENTPIPE
-    tmux send-keys -t $tmux_session "$command" C-m
-done
+# while true; do
+#     read -r command < $AGENTPIPE
+#     tmux send-keys -t $tmux_session "$command" C-m
+# done
