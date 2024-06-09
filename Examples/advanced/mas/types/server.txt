@@ -1,0 +1,10 @@
+:-dynamic port_list/1.                                                 
+port_list([]).                                                                                                                                 
+append_to_listA(L):- retract(port_list(List)), M=[L|List], assert(port_list(M)).
+print_list([]):-true.                                                  
+print_list([H|T]):- write(H),print_list(T).                            
+
+connectE(AgS):>append_to_listA(A).
+
+writePortsE:>port_list(L),print_list(L).
+                                                  

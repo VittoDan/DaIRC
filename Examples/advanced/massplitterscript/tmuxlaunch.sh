@@ -34,6 +34,7 @@ done
 
 # Create a new pane for the user instance script
 tmux split-window -t $tmux_session -v "/bin/bash -c 'Examples/advanced/massplitterscript/userinstance.sh; echo Press Enter to close; read'"
+#tmux split-window -t $tmux_session -h "/bin/bash -c 'Examples/advanced/massplitterscript/felaunch.sh; echo Press Enter to close; read'"
 tmux select-layout -t $tmux_session tiled
 
 # Attach to the tmux session

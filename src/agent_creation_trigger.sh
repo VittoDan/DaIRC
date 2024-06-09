@@ -18,11 +18,11 @@ fi
 if [ ! -d "$DIRW" ]; then
   mkdir "$EXROOT/work/$1"
 fi
-echo "agent('work/$1/$agent_name','$agent_name','no',italian,['conf/communication'],['../../src/communication_fipa','../../src/learning','../../src/planasp'],'no','../../src/onto/dali_onto.txt',[])." > "$EXROOT/conf/mas/$1/$2.txt"
-cp $EXROOT/mas/types/$1.txt $DIRW/$agent_name.txt
+echo "agent('work/$1/$1_$agent_name','$1_$agent_name','no',italian,['conf/communication'],['../../src/communication_fipa','../../src/learning','../../src/planasp'],'no','../../src/onto/dali_onto.txt',[])." > "$EXROOT/conf/mas/$1/$1_$2.txt"
+cp $EXROOT/mas/types/$1.txt $DIRW/$1_$agent_name.txt
 cd ../Examples/advanced
 
-tmux new-window -t agents_session  -n "$1_$agent_name"  "/bin/bash -c './conf/startagentdyn.sh $2.txt $PROLOG $DALI_HOME $1; echo Press Enter to close; read'"
+tmux new-window -t agents_session  -n "$1_$agent_name"  "/bin/bash -c './conf/startagentdyn.sh $1_$2.txt $PROLOG $DALI_HOME $1; echo Press Enter to close; read'"
 
 
 

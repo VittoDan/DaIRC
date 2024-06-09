@@ -90,6 +90,7 @@ start0(FI):-set_prolog_flag(redefine_warnings,off),
             open(FI,read,Stream,[]), read(Stream,Me), close(Stream),
             Me \= end_of_file,
             agent(File, AgentName, Ontolog, Lang, Fil, Lib, UP, DO, Specialization) = Me,
+            write(AgentName),
             open('server.txt',read,Stream2,[]),read(Stream2,T),close(Stream2),
             if(UP=no, true, assert(user_profile_location(UP))),
             if(DO=no,true,assert(dali_onto_location(DO))),
@@ -120,6 +121,7 @@ load_ontology_file(Ontolog,Agent):-
 filtra_fil(FI):-arg(1,FI,File),token_fil(File),retractall(parentesi(_)),togli_var_fil(File).
 
 start1(Fe,AgentName,Libr,Fil):-
+  write(AgentName),
   set_prolog_flag(discontiguous_warnings,off),
   if(Libr=no,true,libreria(Fe,Libr,Fil)),
 

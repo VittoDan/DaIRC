@@ -11,6 +11,10 @@
 	<div id="item" style="width: 20em; height: 20em;"></div>
 	<div id="test" style="display:flex;">
 		<button id="add">+</button>
+		<button id="add2">+</button>
+		<button id="addServer">Server</button>
+		<button id="addUser">User</button>
+
 	</div>
 </body>
 
@@ -70,11 +74,30 @@
 	});
 
 	document.getElementById("add").addEventListener("click", () => {
-		let msg = { "action": "add", "agentType":"agent1" }
-		console.log("test");
-		socket.send(JSON.stringify(msg));
-		return_socket.send("agent1");
+		let msg = '\'{ \"action\": \"add\", \"item\":\"agentType1\" }\''
+	
+		//socket.send(JSON.stringify(msg));
+		return_socket.send(msg);
 
+	});
+	document.getElementById("add2").addEventListener("click", () => {
+		let msg = '\'{ \"action\": \"add\", \"item\":\"agentType2\" }\''
+	
+		//socket.send(JSON.stringify(msg));
+		return_socket.send(msg);
+	});
+	document.getElementById("addServer").addEventListener("click", () => {
+		let msg = '\'{ \"action\": \"add\", \"item\":\"server\" }\''
+		
+		//socket.send(JSON.stringify(msg));
+		return_socket.send(msg);
+
+	});
+	document.getElementById("addUser").addEventListener("click", () => {
+		let msg = '\'{ \"action\": \"notAdd\", \"item\":\"user\" }\''
+	
+		//socket.send(JSON.stringify(msg));
+		return_socket.send(msg);
 	});
 </script>
 
