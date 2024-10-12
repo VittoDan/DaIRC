@@ -1,9 +1,10 @@
-const { SEND_NODE_WP, RECEIVE_NODE_WP, TOWARDS_PROLOG_SOCKET, AGENT_SOCKET,HTTP_SOCKET } = require('./consts/consts.js');
+const { SEND_NODE_WP, RECEIVE_NODE_WP, TOWARDS_PROLOG_SOCKET, AGENT_SOCKET,HTTP_SOCKET,BACKDATA } = require('./consts/consts.js');
 const WebSocketServer = require("websocket").server;
 const http = require('http');
 const net = require('net');
 const connect = require('connect');
 const serveStatic = require('serve-static');
+const { write } = require('fs');
 
 function blockReq(request,response){
    console.log((new Date()) + ' Received request for ' + request.url);
@@ -40,18 +41,31 @@ webs.on('request', function (request) {
 
 
 
+
 /*<socket ricevente prolog>*/
 var servertoprolog = http.createServer((request, response)=>blockReq(request, response));
 servertoprolog.listen(RECEIVE_NODE_WP, function () {});
 const webstoprolog = new WebSocketServer({httpServer: servertoprolog});
+var skc=0
 webstoprolog.on('request', function (request) {
+
    var connection = request.accept(null, request.origin);
    connection.on('message', function (message) {
       const client = new net.Socket();
+      skc= skc+1;
+      console.log(skc);
+      const messageHandler = (msgback) => {
+         console.log(msgback.toString());
+         const str = Buffer.from(msgback.toString(), 'utf-8').toString();
+         connection.send(str);
+      };
       client.connect(TOWARDS_PROLOG_SOCKET, '127.0.0.1', () => {
-         client.write(message.utf8Data+'.')
-         client.end();
+         client.write(message.utf8Data+'.');
+         client.end();         
       });
+      client.on("data",(data) => {
+         messageHandler(data);
+      })    
       if (message.type === 'utf8') {
          connection.sendUTF(message.utf8Data);
       }

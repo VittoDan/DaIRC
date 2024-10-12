@@ -1,10 +1,55 @@
+:-use_module(library(lists)).
+:- use_module(library(sockets)).
 :-dynamic port_list/1.                                                 
-port_list([]).                                                                                                                                 
-append_to_listA(L):- retract(port_list(List)), M=[L|List], assert(port_list(M)).
+server:-assert(port_list([])).
+
+
+append_to_list(Item) :-
+    retract(port_list(List)),
+    append(List, [Item], NewList),  
+    assert(port_list(NewList)).  
+
+
 print_list([]):-true.                                                  
-print_list([H|T]):- write(H),print_list(T).                            
+print_list([H|T]):- write(H),write(','),print_list(T).                            
 
-connectE(AgS):>append_to_listA(A).
+selective_bcast(Msg):-
+    port_list(ListUp),
+    selective_bcast(Msg,ListUp).
+selective_bcast(Msg,[]):-true.
+selective_bcast(Msg,[H|T]):-
+    send(H,send_message(buff_msg(Msg),Me)),
+    selective_bcast(Msg,T).
 
-writePortsE:>port_list(L),print_list(L).
-                                                  
+connectE(AgS):>
+    port_list(List),
+    (\+member(AgS, List) ->
+        append_to_list(AgS)
+        ;
+        true
+    ),
+    port_list(ListUp),
+    print_list(ListUp).
+
+disconnectE(AgS):>
+    port_list(List),
+    (member(AgS, List) ->
+        delete(List,AgS,Lout),
+        retract(port_list(List)),
+        assert(port_list(Lout)),
+        port_list(ListUp),
+        print_list(ListUp)
+    ).
+chatE(Msg,Usr):>
+    atom_concat(Usr,':',U1),
+    atom_codes(MsgC,Msg),
+    atom_concat(U1,MsgC,U2),
+    atom_codes(U2,Out),    
+    selective_bcast(Out).
+
+fetch_srvE(Port):>
+    port_list(Plist),
+    print_list(Plist),
+    socket_client_open('':Port, Stream, [type(text)]),
+    write(Stream, Plist), write(Stream, '.'), nl(Stream),
+    close(Stream).

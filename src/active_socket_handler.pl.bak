@@ -1,0 +1,207 @@
+# :- use_module(library(sockets)).
+# :- use_module(library(process)).
+# :- use_module(library(mutdict)).
+# :- use_module(library(codesio)).
+# :- use_module(library(json)).
+# :- use_module(library(lists)).
+# :- use_module(library(file_systems)).
+
+# :- dynamic user_dict/1.                                                 
+# :- dynamic server_dict/1.  
+# :- dynamic port_dict/1.
+# :- dynamic file_back_dict/1.
+
+
+# :- new_mutdict(PortDict),assert(user_dict(PortDict)).
+# :- new_mutdict(PortDict),assert(server_dict(PortDict)).
+# :- new_mutdict(PortDict),assert(port_dict(PortDict)).
+# :- new_mutdict(PortDict),assert(file_back_dict(PortDict)).
+
+# append_to_list_users(K,V):- retract(user_dict(Dict)) , mutdict_put(Dict,K,V), assert(user_dict(Dict)).
+# append_to_list_servers(K,V):- retract(server_dict(Dict)) , mutdict_put(Dict,K,V), assert(server_dict(Dict)).
+# append_to_list_file_back(K,V):- retract(file_back_dict(Dict)) , mutdict_put(Dict,K,V), assert(file_back_dict(Dict)).
+
+
+# int_to_atom(Int, Atom) :-
+#     number_codes(Int, Codes),
+#     atom_codes(Atom, Codes).
+# parse_json_from_string(JSONString, JSONObject) :-   
+#     atom_codes(JSONString, JSONCodes),                                                          
+#     json_from_codes(JSONCodes, JSONObject).
+# get_item(JSONObject, Item) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('item'=Item, Members).                                                                                                           
+# get_action(JSONObject, Action) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('action'=Action, Members).                                                                                                           
+# get_type(JSONObject, Type) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('type'=Type, Members).                                                                                                          
+# get_uname(JSONObject, Uname) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('uname'=Uname, Members).      
+# get_sname(JSONObject, Sname) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('sname'=Sname, Members).                                                                                                           
+# get_msg(JSONObject, Msg) :-    
+#     JSONObject = json(Members),
+#     member('msg'=Msg, Members).   
+# get_port(JSONObject, Port) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('port'=Port, Members).   
+# get_server(JSONObject, Server) :-                                                                                                           
+#     JSONObject = json(Members),                                                                                                                    
+#     member('server'=Server, Members).   
+
+# socket_readystate([],_):-false.
+# socket_readystate([S|_],S):-true.
+# socket_getready([],_):- false.
+# socket_getready([S|_],S):- true.     
+# socket_getready([S|K],Q):- socket_getready([K],Q).   
+
+# write_msg_agent(Uname,Msg):-
+#                 set_prolog_flag(double_quotes, atom),     
+#                 atom_concat('/home/ubuntu/DALI/Examples/advanced/conf/comfiles/in/',Uname,A), % lascio questo approccio perchè potrebbe essere interessante: eviterei magari così, forse uno studio su un meccanismo di IPC più serio sarebbe ideale per DALI
+#                 atom_concat(A,'.txt',File),
+#                 open(File,write,WriteStream),
+#                 write(File),
+#                 write(WriteStream,Msg),
+#                 close(WriteStream),
+#                 write(File).
+# socket_handler(Sockets):-
+#     socket_select(Sockets,SReady,[],RReady,[],WReady,off),
+#     (\+ socket_getready(SReady,Sk) ->
+#         socket_handler(Sockets)
+#         ;
+#         socket_check_client_messages(SReady,Msg,S)
+#     ),
+#     socket_handler(Sockets).
+
+# agent_socket_handler:-
+#     socket_server_open('':1337, Sk, [loopback(true), numeric_nodename(true), reuseaddr(true)]),
+#     socket_handler([Sk]).
+# read_line_till_EOL(RStream,Itm):-
+#     read_line(RStream,CItem),
+#     (\+ atom(Itm) ->
+#         Itm=''
+#         ;
+#         true
+#     ),
+#     (\+ CItem == end_of_file  ->
+#         atom_concat(Itm,'^',I1),
+#         atom_codes(Out,CItem),
+#         atom_concat(I1,Out,Back),
+#         read_line_till_EOL(RStream,Back)
+#         ;
+#         true   
+#     ).
+# socket_check_client_messages([],_,_):-true.
+
+# socket_check_client_messages([SocketToRead|Srest],Msg,L):-
+#     socket_server_accept(SocketToRead,_,S,[type(text)]),
+#     read(S, Msg),
+#     parse_json_from_string(Msg, JSONObject),
+#     get_action(JSONObject,J),
+#         (J == add  ->
+#             get_item(JSONObject,It),
+#             get_type(It,Type),
+#             get_uname(It,Uname),
+#             user_dict(Udict),
+#             mutdict_size(Udict,Size),
+#             (\+ mutdict_get(Udict,Uname,Val) ->
+#                 create_new_user(Type,Uname),
+#                 append_to_list_users(Uname,S),
+#                 socket_handler([SocketToRead|Srest])
+#                 ;
+#                 write_msg_agent(Uname,'USR_ALREADY_UP.'),
+#                 socket_handler([SocketToRead|Srest])
+#             )
+#             ;
+#         J == create_server ->
+#             get_item(JSONObject,It),
+#             get_type(It,Type),
+#             get_sname(It,Sname),
+#             server_dict(SDict),
+#             (\+ mutdict_get(SDict,Sname,Val) ->
+#                 create_new_server(Type,Sname),
+#                 socket_handler([SocketToRead|Srest])
+#             ) 
+#             ;
+#         J == port  ->
+#             get_item(JSONObject,It),
+#             get_uname(It,Uname),                
+#             socket_handler([SocketToRead|Srest])
+#             ;
+#         J == server_list ->
+#             server_dict(SD),
+#             mutdict_keys(SD,SL),
+#             write(S,SL),
+#             flush_output(S),
+#             socket_handler([SocketToRead|Srest])
+#             ;
+#         J == msg ->
+#                 get_item(JSONObject,It),
+#                 get_uname(It,Uname),
+#                 get_msg(It,IncomingMsg),                
+#                 atom_concat(J,'^',First),
+#                 atom_concat(First,Uname,Second),
+#                 atom_concat(Second,'^',Third),
+#                 atom_concat('\'',IncomingMsg,A1),
+#                 atom_concat(A1,'\'',A2),
+#                 atom_concat(Third,A2,Dot),
+#                 atom_concat(Dot,'.',Final),
+#                 write_msg_agent(Uname,Final),
+#                 socket_handler([SocketToRead|Srest])
+#             ;
+#         J == connect_server ->
+#                 get_item(JSONObject,It),
+#                 get_uname(It,Uname),
+#                 get_server(It,Server),
+#                 atom_concat(J,'^',First),
+#                 atom_concat(First,Uname,Second),
+#                 atom_concat(Second,'^',Third),
+#                 atom_concat(Third,Server,Dot),
+#                 atom_concat(Dot,'.',Final),
+#                 write_msg_agent(Uname,Final)
+#             ;
+#         J == fetch_messages ->
+#                 set_prolog_flag(double_quotes, atom),
+#                 get_item(JSONObject,It),
+#                 get_uname(It,Uname),
+#                 atom_concat('user_',Uname,UN),
+#                 atom_concat('/home/ubuntu/DALI/Examples/advanced/conf/comfiles/sendback/',UN,AF),
+#                 atom_concat(AF,'.txt',File),
+#                 (file_exists(File) ->
+#                     write(File),
+#                     process_create(path(cat), [File], [stdout(pipe(P))]),
+#                     read_line_till_EOL(P,Itm),
+#                     close(P),
+#                     write(File),
+#                     atom_concat('{\\"action\\":\\"backmsgs\\",\\"item\\":{\\"msg\\":\\"',Itm,M1),
+#                     atom_concat(M1,'\\"}}',M2),
+#                     write(S,Itm),
+#                     flush_output(S)
+#                     ;
+#                     true
+#                 )
+#     ).
+
+
+# create_new_user(T,U) :-
+#     set_prolog_flag(double_quotes, atom),     
+#     atom_concat('./agent_creation_trigger.sh ', T, O),
+#     atom_concat(O, ' ', O2),
+#     atom_concat(O2 ,U, O3),
+#     process_create(path(sh), ['-c', [O3]], [wait(exit(0))]).
+
+# create_new_server(T,Sname) :-
+#     append_to_list_servers(Sname,Sname),
+#     set_prolog_flag(double_quotes, atom),     
+#     atom_concat('./agent_creation_trigger.sh ', T, O),
+#     atom_concat(O, ' ', O2),
+#     atom_concat(O2 ,Sname, O3),
+#     process_create(path(sh), ['-c', [O3]], [wait(exit(0))]).
+
+
+# ?- agent_socket_handler.
+% Vecchio meccanismo con file di buffer (non funzionante) ma utile

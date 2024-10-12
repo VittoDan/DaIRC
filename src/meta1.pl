@@ -71,11 +71,11 @@ call_meta_execute_propose(A,C,Ag):-
              clause(agente(_,_,F,_),_),
              once(chiama_execute_propose(F,A,C,Ag)).
 
-chiama_execute_propose(F,A,C,Ag):-go_rvar(A),prendi_value(H),
+chiama_execute_propose(F,A,C,Ag):-go_rvar(A),prendi_value(H),write('1st'),
                              exists_action(F,H),esegui_propose(H,C,Ag).
 
 chiama_execute_propose(F,A,C,Ag):-meta(A,G,_),go_rvar(G),
-                prendi_value(H),exists_action(F,H),esegui_propose(H,C,Ag).
+                prendi_value(H),write('2st'),exists_action(F,H),esegui_propose(H,C,Ag).
 
 
 
@@ -221,7 +221,7 @@ ext_event(_,_,AgM,_,_,ME,T):-functor(ME,E,_),clause(external_event(E,P),_),
 
 
 %CHECK PER PROPOSE
-esegui_propose(H,C,Ag):-vere_cond(H,C,Ag).
+esegui_propose(H,C,Ag):-write('VERECOND'),write(C),vere_cond(H,C,Ag).
 vere_cond(A,Lc,Ag):-Lc=[H|T],functor(H,F,N),current_predicate(F/N),call(H),!,vere_cond(A,T,Ag).
 vere_cond(A,Lc,Ag):-Lc=[H|T],evp(H),!,vere_cond(A,T,Ag).
 vere_cond(A,[],Ag):-assert((do_propose(A,Ag):-cd(A),asse_cosa(do_action(A,Ag)))),assert(do_action_propose(A,Ag)).

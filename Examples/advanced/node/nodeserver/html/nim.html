@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+        </title>
+       
+        <style>
+            body{
+                font-size: 2.5em;
+            }
+            span:hover{
+                color:blue;
+            }
+            span span:hover,
+            span:hover ~ span {
+                color: blue;
+            }
+        </style>
+    </head>
+   
+    <body>
+
+    </body>
+
+    <script>
+let game = [["1","0","0","0"], ["1", "1","0","0"], ["1", "1", "1","0"], ["1", "1", "1", "1"]];
+let botclick=false
+function genBoard() {
+    document.body.innerHTML = "";  
+    game.forEach((e, index) => {
+        if(!e.every((r)=> r == 0)){
+        let rowDiv = document.createElement('div');
+        rowDiv.id = 'c' + index;
+        document.body.appendChild(rowDiv);        
+            e.forEach((f, subIndex) => {
+                let spanEl = document.createElement('span');
+                spanEl.setAttribute("class",subIndex);
+                spanEl.innerHTML = f == "1" ? "•" : "";
+
+                spanEl.addEventListener('click', () => {
+                    console.log(subIndex)
+                    console.log(e.length)
+                    for (let i = subIndex; i < e.length; i++) {
+                        e[i] = "0";
+                    }
+                    if(!botclick){
+                        const msg = '{"action":"nim_back_from_iframe","item":[[' +game[0]+'],['+game[1]+'],['+game[2]+ '],['+game[3]+ ']]}';
+                        window.parent.postMessage(msg, '*');
+                    }else
+                    {
+                        botclick = false;
+                    }
+                    genBoard(); 
+                });
+
+                rowDiv.appendChild(spanEl);
+            });
+        }else{
+            let rowDiv = document.createElement('br');
+            rowDiv.id = 'c' + index;
+            document.body.appendChild(rowDiv);    
+        }
+    });
+    
+}
+
+genBoard();
+
+window.addEventListener('message', function(event) {
+        if(event.data["action"]=="nim_answer"){
+            botclick = true;
+            indexRow= Math.floor(event.data["item"]/4)
+            indexCol= (event.data["item"]%4)-1
+            document.getElementById("c"+indexRow).getElementsByClassName(indexCol)[0].click();
+        }
+    });
+    </script>
+</html>

@@ -1,0 +1,163 @@
+:- use_module(library(sockets)).
+:- use_module(library(process)).
+:- use_module(library(mutdict)).
+:- use_module(library(codesio)).
+:- use_module(library(system)).
+:- use_module(library(json)).
+:- use_module(library(lists)).
+:- dynamic username/1.
+:- dynamic server_connectedto/1.
+:- dynamic msg_buffer/1.
+:- dynamic peer_request/1.
+:- dynamic peer_to_peer_enabled/1.
+:-set_prolog_flag(double_quotes, atom).
+
+print_list([]):-true.                                                  
+print_list([H|T]):- write(H),write(','),print_list(T).                            
+
+
+append_to_list_msg(Item) :-
+    retract(msg_buffer(List)),
+    append(List, [Item], NewList),  
+    assert(msg_buffer(NewList)).  
+
+get_item(JSONObject, Item) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('item'=Item, Members).                                                                                                           
+get_action(JSONObject, Action) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('action'=Action, Members).     
+get_msg(JSONObject, Msg) :-                                                                        
+    JSONObject = json(Members),
+    member('msg'=Msg, Members). 
+get_server(JSONObject, Server) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('server'=Server, Members).   
+
+send_message_tgt_cts(Target,User):-
+    send(Target,send_message(connect(User),Me)).
+send_message_tgt_dfs(Target,User):-
+    send(Target,send_message(disconnect(User),Me)).
+user:-
+    agent(A),
+    assert(username(A)),
+    assert(server_connectedto('')),
+    assert(msg_buffer([])),
+    assert(peer_request('')),
+    assert(peer_to_peer_enabled(false)).
+
+connectE(Server):>
+    username(U),
+    server_connectedto(SCT),
+    (\+ SCT == '' ->
+        send_message_tgt_dfs(SCT,U),
+        send_message_tgt_cts(Server,U),
+        retract(server_connectedto(SCT)),
+        assert(server_connectedto(Server))        
+        ;
+        send_message_tgt_cts(Server,U),
+        retract(server_connectedto(SCT)),
+        assert(server_connectedto(Server)),
+        nl
+    ).
+
+chatE(Msg):>
+    username(A),
+    peer_request(Peer),
+    peer_to_peer_enabled(PeerBool),
+    (\+ Peer == '', PeerBool ->
+        send(Peer,send_message(buff_msg(Msg),Me)),
+        send(A,send_message(buff_msg(Msg),A))
+    ;
+        server_connectedto(Sct),
+        send(Sct,send_message(chat(Msg,A),Me))
+    ).
+
+
+buff_msgE(Msg):>
+    append_to_list_msg(Msg),
+    msg_buffer(M).
+
+socket_handling(Port):-
+    msg_buffer(Msg),nl,
+    socket_client_open('':Port, Stream, [type(text)]),
+    write(Stream, Msg), write(Stream, '.'), nl(Stream),
+    close(Stream),
+    retract(msg_buffer(Msg)),
+    assert(msg_buffer([])).
+
+send_message_srv_fetch(Target,Port):- 
+    send(Target,send_message(fetch_srv(Port),Me)).
+
+socket_handling_srv(Port):-
+    server_connectedto(Srvr),
+    socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+    send_message_srv_fetch(Srvr,PortBackFetch),
+    socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+    read(SS,ListItems),
+    close(SS),
+    socket_client_open('':Port, Stream, [type(text)]),
+    write(Stream, ListItems), write(Stream, '.'), nl(Stream),
+    close(Stream).
+
+send_message_srv_fetch(Target,Port):-     
+    send(Target,send_message(fetch_srv(Port),Me)).
+
+socket_handling_peer_req(Port):-
+    peer_request(Peer),nl,
+    socket_client_open('':Port, Stream, [type(text)]),
+    peer_to_peer_enabled(P),
+    (\+ Peer == '',\+ P->
+        write(Stream, Peer), write(Stream, '.'), nl(Stream),
+        close(Stream)
+    ;
+        close(Stream)
+    ).
+
+fetchE(Port) :>
+    socket_handling(Port).    
+
+fetch_srvE(Port) :>
+    socket_handling_srv(Port).    
+
+fetch_peer_reqE(Port):>
+    socket_handling_peer_req(Port).
+
+sender_start_connect_peer_requestE(Peer):>
+    agent(Sender),
+    server_connectedto(Srv),
+    messageA(Srv,inform(connect_peer_req(Peer,Sender),Sender)).
+
+peer_to_connectE(Sender):>
+    retract(peer_request(OldPeer)),
+    assert(peer_request(Sender)).
+
+
+accept_reqE:>
+    peer_request(Peer),
+    agent(A),
+    server_connectedto(Srv),
+    retract(peer_to_peer_enabled(P)),
+    assert(peer_to_peer_enabled(true)),
+    messageA(Srv,confirm(connect_peer_req(Peer,A),Me)).
+decline_reqE:>
+    retract(peer_to_peer_enabled(P)),
+    retract(peer_request(Q)),
+    assert(peer_request('')),
+    assert(peer_to_peer_enabled(false)),
+    peer_request(Peer),
+    agent(A),
+    server_connectedto(Srv),
+    messageA(Srv,disconfirm(connect_peer_req(Peer,A),Me)).
+
+
+req_accept_receiverE(Peer):>
+    retract(peer_request(Q)),
+    assert(peer_request(Peer)),
+    retract(peer_to_peer_enabled(false)),
+    assert(peer_to_peer_enabled(true)).
+req_decline_receiverE:>
+    retract(peer_to_peer_enabled(P)),
+    retract(peer_request(Q)),
+    assert(peer_request('')),
+    assert(peer_to_peer_enabled(false)).

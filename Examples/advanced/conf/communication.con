@@ -23,7 +23,7 @@ tell(To,_,propose(_,_)):-true.
 tell(To,_,request(_,_)):-true.
 tell(To,_,execute_proc(_)):-true.
 tell(To,_,agree(_)):-true.
-tell(To,_,reject_proposal(_,_)):-true.
+tell(To,From,reject_proposal(_,_)):-write(To),write(From),write('someone called this'),nl,true.
 tell(To,_,accept_proposal(_,_)):-true.
 tell(To,_,failure(_,_)):-true.
 tell(To,_,query_ref(_,_)):-true.

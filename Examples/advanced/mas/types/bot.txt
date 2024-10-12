@@ -1,0 +1,658 @@
+:- use_module(library(sockets)).
+:- use_module(library(process)).
+:- use_module(library(mutdict)).
+:- use_module(library(codesio)).
+:- use_module(library(system)).
+:- use_module(library(json)).
+:- use_module(library(lists)).
+:- use_module(library(mutarray)).
+:- dynamic username/1.
+:- dynamic server_connectedto/1.
+:- dynamic msg_buffer/1.
+:- dynamic peer_request/1.
+:- dynamic peer_to_peer_enabled/1.
+:- dynamic turn/1.
+:- dynamic tris_best_move/1.
+:- dynamic tris_best_heur/1.
+:- dynamic tris_best_state/1.
+:- dynamic tris_back_port/1.
+:- dynamic nim_best_move/1.
+:- dynamic nim_best_heur/1.
+:- dynamic nim_best_state/1.
+:- dynamic nim_back_port/1.
+:- dynamic frustration_tris/1.
+:- dynamic frustration_nim/1.
+:- dynamic frustration_tris_conveyed/1.
+:- dynamic frustration_nim_conveyed/1.
+:- dynamic frustration_total_conveyed/1.
+:- dynamic cleanup/1.
+:-set_prolog_flag(double_quotes, atom).
+
+absolute_value(X, AbsX) :-
+    X >= 0,
+    AbsX is X.
+
+absolute_value(X, AbsX) :-
+    X < 0,
+    AbsX is -X.
+
+parse_json_from_string(JSONString, JSONObject) :-   
+    atom_codes(JSONString, JSONCodes),                                                          
+    json_from_codes(JSONCodes, JSONObject).
+print_list([]):-true.                                                  
+print_list([H|T]):- write(H),write(','),print_list(T).                            
+append_to_list_tris_zeroes([], Itm, [Itm]):- true.
+append_to_list_tris_zeroes([Head|Tail], Itm, [Head|NewTail]) :-
+    append_to_list_tris_zeroes(Tail, Itm, NewTail).
+append_to_list_msg(Item) :-
+    retract(msg_buffer(List)),
+    append(List, [Item], NewList),  
+    assert(msg_buffer(NewList)).  
+get_item(JSONObject, Item) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('item'=Item, Members).                                                                                                           
+get_action(JSONObject, Action) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('action'=Action, Members).     
+get_msg(JSONObject, Msg) :-                                                                        
+    JSONObject = json(Members),
+    member('msg'=Msg, Members). 
+get_server(JSONObject, Server) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('server'=Server, Members).   
+get_item(JSONObject, Item) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('item'=Item, Members).      
+send_cleanup_msg(Targer):-
+    sleep(2),
+    send(Target,send_message(buff_msg("!clear"),Me)),
+    sleep(2).
+send_message_tgt_cts(Target,User):-
+    send(Target,send_message(connect(User),Me)).
+send_message_victory(Target):-
+    send(Target,send_message(buff_msg("Hai vinto!"),Me)).
+send_message_loss(Target):-
+    send(Target,send_message(buff_msg("Hai perso!"),Me)).
+send_message_frustrated_tris(Target):-
+    sleep(2),
+    send(Target,send_message(buff_msg("Non voglio giocare piu a tris"),Me)).
+send_message_frustrated_nim(Target):-
+    sleep(2),
+    send(Target,send_message(buff_msg("Non voglio giocare piu a nim"),Me)).
+send_message_frustrated(Target):-
+    send(Target,send_message(buff_msg("Basta, non voglio piu giocare"),Me)).
+send_message_tgt_dfs(Target,User):-
+    send(Target,send_message(disconnect(User),Me)).
+bot:-
+    agent(A),
+    assert(username(A)),
+    assert(server_connectedto('')),
+    assert(msg_buffer([])),
+    assert(peer_request('')),
+    assert(peer_to_peer_enabled(false)),
+    assert(turn(-1)),
+    assert(tris_best_move(-1)),
+    assert(tris_best_heur(-9999999)),
+    assert(tris_best_state([])),
+    assert(tris_back_port(-1)),
+    assert(nim_best_move(-1)),
+    assert(nim_best_heur(-9999999)),
+    assert(nim_best_state([])),
+    assert(nim_back_port(-1)),
+    assert(frustration_tris(0)),
+    assert(frustration_nim(0)),
+    assert(frustration_tris_conveyed(0)),
+    assert(frustration_nim_conveyed(0)),
+    assert(frustration_total_conveyed(0)),
+    assert(cleanup(0)).
+
+connectE(Server):>
+    
+    username(U),
+    server_connectedto(SCT),
+    (\+ SCT == '' ->
+        send_message_tgt_dfs(SCT,U),
+        send_message_tgt_cts(Server,U),
+        retract(server_connectedto(SCT)),
+        assert(server_connectedto(Server))        
+        ;
+        send_message_tgt_cts(Server,U),
+        retract(server_connectedto(SCT)),
+        assert(server_connectedto(Server)),
+        nl
+    ).
+
+chatE(Msg):>
+    username(A),
+    peer_request(Peer),
+    peer_to_peer_enabled(PeerBool),
+    (\+ Peer == '', PeerBool ->
+        msg_elab(Msg)
+    ;
+        server_connectedto(Sct),
+        write(Msg),
+        send(Sct,send_message(chat(Msg,A),Me))
+    ).
+
+
+
+buff_msgE(Msg):>
+    write('buff_msg'),
+    write(Msg),
+    username(A),
+    peer_request(Peer),
+    peer_to_peer_enabled(PeerBool),
+    (\+ Peer == '', PeerBool ->
+        msg_elab(Msg), 
+        append_to_list_msg(Msg)
+    ;
+        append_to_list_msg(Msg)
+    ).
+msg_elab(Msg):-
+    frustration_tris(T),
+    frustration_nim(N),
+    peer_request(Peer),
+    username(A),    
+    (Msg == "!tris" ->
+        (T =< 3 ->
+            append_to_list_msg(Msg)
+            ;
+            send(Peer,send_message(buff_msg("<br>Non voglio piu giocare a tris"),Me)),
+            send(A,send_message(buff_msg("<br>Non voglio piu giocare a tris"),A))
+        )
+        ;
+    Msg == "!nim" ->
+        (N =< 3 ->
+            append_to_list_msg(Msg)
+            ;
+            send(Peer,send_message(buff_msg("<br>Non voglio piu giocare a nim"),Me)),
+            send(A,send_message(buff_msg("<br>Non voglio piu giocare a nim"),A))
+        )
+    ;
+            append_to_list_msg(Msg)
+    ).
+
+
+socket_handling(Port):-
+    msg_buffer(Msg),nl,
+    socket_client_open('':Port, Stream, [type(text)]),
+    write(Stream, Msg), write(Stream, '.'), nl(Stream),
+    close(Stream),
+    retract(msg_buffer(Msg)),
+    assert(msg_buffer([])).
+
+send_message_srv_fetch(Target,Port):- 
+    send(Target,send_message(fetch_srv(Port),Me)).
+
+socket_handling_srv(Port):-
+    server_connectedto(Srvr),
+    socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+    send_message_srv_fetch(Srvr,PortBackFetch),
+    socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+    read(SS,ListItems),
+    close(SS),
+    socket_client_open('':Port, Stream, [type(text)]),
+    write('ListItems'),
+    print_list(ListItems),nl,
+    write(Stream, ListItems), write(Stream, '.'), nl(Stream),
+    close(Stream).
+
+send_message_srv_fetch(Target,Port):- 
+    send(Target,send_message(fetch_srv(Port),Me)).
+
+socket_handling_peer_req(Port):-
+    peer_request(Peer),nl,
+    socket_client_open('':Port, Stream, [type(text)]),
+    peer_to_peer_enabled(P),
+    (\+ Peer == '',\+ P->
+        write(Stream, Peer), write(Stream, '.'), nl(Stream),
+        close(Stream)
+    ;
+        close(Stream)
+    ).
+
+fetchE(Port) :>
+    socket_handling(Port).    
+
+fetch_srvE(Port) :>
+    socket_handling_srv(Port).    
+
+fetch_peer_reqE(Port):>
+    socket_handling_peer_req(Port).
+
+sender_start_connect_peer_requestE(Peer):>
+    agent(Sender),
+    server_connectedto(Srv),
+    messageA(Srv,inform(connect_peer_req(Peer,Sender),Sender)).
+
+peer_to_connectE(Sender):>
+    agent(A),
+    retract(peer_request(OldPeer)),
+    assert(peer_request(Sender)),
+    socket_client_open('':1337,Stream, [type(text)]),
+    retract(peer_to_peer_enabled(P)),
+    assert(peer_to_peer_enabled(true)),
+    format(Stream,'\'{"action": "accept_req","item":{"uname":"bot_bot","peer":"~w"}}\'.',[Sender]),
+    flush_output(Stream),
+    close(Stream).
+accept_reqE:>
+    peer_request(Peer),
+    agent(A),
+    server_connectedto(Srv),
+    retract(peer_to_peer_enabled(P)),
+    assert(peer_to_peer_enabled(true)),
+    messageA(Srv,confirm(connect_peer_req(Peer,A),Me)).
+decline_reqE:>
+    retract(peer_to_peer_enabled(P)),
+    retract(peer_request(Q)),
+    assert(peer_request('')),
+    assert(peer_to_peer_enabled(false)),
+    peer_request(Peer),
+    agent(A),
+    server_connectedto(Srv),
+    messageA(Srv,disconfirm(connect_peer_req(Peer,A),Me)).
+
+
+req_accept_receiverE(Peer):>
+    retract(peer_request(Q)),
+    assert(peer_request(Peer)),
+    retract(peer_to_peer_enabled(false)),
+    assert(peer_to_peer_enabled(true)).
+req_decline_receiverE:>
+    retract(peer_to_peer_enabled(P)),
+    retract(peer_request(Q)),
+    assert(peer_request('')),
+    assert(peer_to_peer_enabled(false)).
+
+heuristic_tris(Game,H):-
+    mutarray_get(Game,1,Itm1),
+    mutarray_get(Game,2,Itm2),
+    mutarray_get(Game,3,Itm3),
+    mutarray_get(Game,4,Itm4),
+    mutarray_get(Game,5,Itm5),
+    mutarray_get(Game,6,Itm6),
+    mutarray_get(Game,7,Itm7),
+    mutarray_get(Game,8,Itm8),
+    mutarray_get(Game,9,Itm9),
+    mutarray_length(Game,Length),
+    Diag is Itm1 + Itm5 + Itm9,
+    ADiag is Itm7 + Itm5 + Itm3,
+    Row1 is Itm1 + Itm2 + Itm3,
+    Row2 is Itm4 + Itm5 + Itm6,
+    Row3 is Itm7 + Itm8 + Itm9,
+    Col1 is Itm1 + Itm4 + Itm7,
+    Col2 is Itm2 + Itm5 + Itm8,
+    Col3 is Itm3 + Itm6 + Itm9,
+    H is Diag + ADiag + Row1 + Row2 + Row3 + Col1 + Col2 + Col3.
+
+copy_mutarray(Original, Copy) :-
+    mutarray_length(Original, Length),
+    new_mutarray(Copy, Length),
+    copy_mutarray_elements(Original, Copy, 1, Length).
+copy_mutarray_elements(_, _, Index, Length) :-
+    Index > Length, !.  
+copy_mutarray_elements(Original, Copy, Index, Length) :-
+    mutarray_get(Original, Index, Element),
+    mutarray_put(Copy, Index, Element),
+    NextIndex is Index + 1,
+    copy_mutarray_elements(Original, Copy, NextIndex, Length).
+
+best_first_tris([],_):- true.
+    
+best_first_tris([H|T],State):-
+    check_winning_tris(State,WinningFlag),
+    (\+ WinningFlag == 1 ->
+        tris_best_heur(TBH),
+        turn(Turn),
+        copy_mutarray(State,NState),
+        mutarray_put(NState,H,Turn),
+        heuristic_tris(NState,Hval),
+        absolute_value(Hval,ABSHval),
+        (ABSHval>TBH ->
+            retract(tris_best_heur(TBH)),
+            retract(tris_best_move(TBM)),
+            retract(tris_best_state(TBS)),
+            assert(tris_best_move(H)),
+            assert(tris_best_heur(ABSHval)),
+            mutarray_to_list(NState,List),
+            assert(tris_best_state(List))
+            ;
+            true
+        ),
+        best_first_tris(T,State)
+    ;
+        true
+    ).
+
+nim_apply_move(State,Move):-
+    MoveMod is (Move-1) mod 4,
+    (\+ MoveMod == 0 ->
+        mutarray_put(State,Move,0)
+        ;
+        true
+    ).
+
+bitlist_to_number(BitList, Number) :-
+    reverse(BitList, ReversedBitList),
+    bitlist_to_number(ReversedBitList, 0, 0, Number).
+
+bitlist_to_number([], _, Number, Number).
+bitlist_to_number([Bit|Bits], Pos, Acc, Number) :-
+    NewAcc is Acc + Bit * (2 ^ Pos),
+    NewPos is Pos + 1,
+    bitlist_to_number(Bits, NewPos, NewAcc, Number).
+
+xor_bitwise([],[],[]):-true.
+xor_bitwise([H1|T1],[H2|T2],[Q|R]):-
+    Q is H1\H2,
+    xor_bitwise(T1,T2,R).
+
+
+heuristic_nim(Game,H):-
+    mutarray_get(Game,1,Itm1),
+    mutarray_get(Game,2,Itm2),
+    mutarray_get(Game,3,Itm3),
+    mutarray_get(Game,4,Itm4),
+    mutarray_get(Game,5,Itm5),
+    mutarray_get(Game,6,Itm6),
+    mutarray_get(Game,7,Itm7),
+    mutarray_get(Game,8,Itm8),
+    mutarray_get(Game,9,Itm9),
+    mutarray_get(Game,10,Itm10),
+    mutarray_get(Game,11,Itm11),
+    mutarray_get(Game,12,Itm12),
+    mutarray_get(Game,13,Itm13),
+    mutarray_get(Game,14,Itm14),
+    mutarray_get(Game,15,Itm15),
+    mutarray_get(Game,16,Itm16),
+    xor_bitwise([Itm1,Itm2,Itm3,Itm4],[Itm5,Itm6,Itm7,Itm8],Xor1),
+    xor_bitwise(Xor1,[Itm9,Itm10,Itm11,Itm12],Xor2),
+    xor_bitwise(Xor2,[Itm13,Itm14,Itm15,Itm16],Xor3),
+    bitlist_to_number(Xor3,Val),
+    H = Val.
+heuristic_nim_dumb(Game, H) :-
+    mutarray_get(Game, 1, Itm1),
+    mutarray_get(Game, 2, Itm2),
+    mutarray_get(Game, 3, Itm3),
+    mutarray_get(Game, 4, Itm4),
+    mutarray_get(Game, 5, Itm5),
+    mutarray_get(Game, 6, Itm6),
+    mutarray_get(Game, 7, Itm7),
+    mutarray_get(Game, 8, Itm8),
+    mutarray_get(Game, 9, Itm9),
+    mutarray_get(Game, 10, Itm10),
+    mutarray_get(Game, 11, Itm11),
+    mutarray_get(Game, 12, Itm12),
+    mutarray_get(Game, 13, Itm13),
+    mutarray_get(Game, 14, Itm14),
+    mutarray_get(Game, 15, Itm15),
+    mutarray_get(Game, 16, Itm16),
+        H is Itm1 + Itm2 + Itm3 + Itm4 + Itm5 + Itm6 + Itm7 + Itm8 +
+         Itm9 + Itm10 + Itm11 + Itm12 + Itm13 + Itm14 + Itm15 + Itm16.
+
+best_first_nim([],_):- true.
+best_first_nim([H|T],State):-
+    check_winning_nim(State,WinningFlag),
+    (\+ WinningFlag == 1 ->
+        nim_best_heur(TBH),
+        copy_mutarray(State,NState),
+        nim_apply_move(NState,H),
+        heuristic_nim(NState,Hval),
+        (Hval>TBH ->
+            retract(nim_best_heur(TBH)),
+            retract(nim_best_move(TBM)),
+            retract(nim_best_state(TBS)),
+            assert(nim_best_move(H)),
+            assert(nim_best_heur(Hval)),
+            mutarray_to_list(NState,List),
+            assert(nim_best_state(List))
+            ;
+            true
+        ),
+        best_first_nim(T,State)
+    ;
+        true
+    ).
+
+best_first_tris(State):-
+    retract(tris_best_move(I)),
+    retract(tris_best_heur(J)),
+    assert(tris_best_move(-1)),
+    assert(tris_best_heur(-9999999)),
+    copy_mutarray(State,NState),
+    mutarray_length(NState,Length),
+    mutarray_get_zeroelems(NState, Length, Zeroelems),
+    best_first_tris(Zeroelems,NState).
+
+best_first_nim(State):-
+    retract(nim_best_move(I)),
+    retract(nim_best_heur(J)),
+    assert(nim_best_move(-1)),
+    assert(nim_best_heur(-9999999)),
+    copy_mutarray(State,NState),
+    mutarray_length(NState,Length),
+    mutarray_get_nim_moves(NState, Length, NimIndexes),
+    best_first_nim(NimIndexes,NState).
+
+
+mutarray_print(Array,Length):-
+    mutarray_print(Array,1,Length).
+
+mutarray_print(Array,N,Length):-
+    L is Length+1,
+    (\+ N == L ->
+        mutarray_get(Array, N, E),
+        write('Element '),
+        write(N),
+        write(': '),
+        write(E),nl,
+        Np is N+1,
+        mutarray_print(Array, Np, Length)
+    ;
+        true
+    ).
+
+mutarray_get_zeroelems(Array, Length, Zeroelems) :-
+    mutarray_get_zeroelems(Array, 1, Length, [], Zeroelems).
+
+mutarray_get_zeroelems(_, N, Length, Acc, Zeroelems) :-
+    N > Length,
+    Zeroelems=Acc.
+
+mutarray_get_zeroelems(Array, N, Length, Acc, Zeroelems) :-
+    N =< Length,
+    mutarray_get(Array, N, E),
+    ( E == 0 ->
+        NewAcc = [N | Acc]
+    ;
+        NewAcc = Acc
+    ),
+    Np is N + 1,
+    mutarray_get_zeroelems(Array, Np, Length, NewAcc, Zeroelems).
+
+
+mutarray_get_nim_moves(Array, Length, Zeroelems) :-
+    mutarray_get_nim_moves(Array, 1, Length, [], Zeroelems).
+
+mutarray_get_nim_moves(_, N, Length, Acc, Zeroelems) :-
+    N > Length,
+    Zeroelems=Acc.
+
+mutarray_get_nim_moves(Array, N, Length, Acc, Zeroelems) :-
+    N =< Length,
+    mutarray_get(Array, N, E),
+    ( E == 1 ->
+        NewAcc = [N | Acc]
+    ;
+        NewAcc = Acc
+    ),
+    Np is N + 1,
+    mutarray_get_nim_moves(Array, Np, Length, NewAcc, Zeroelems).
+
+
+check_winning_nim_counter([], Counter) :-
+    Counter = 0.
+
+check_winning_nim_counter([H|T], Counter) :-
+    ( H == 1 ->
+        check_winning_nim_counter(T, NewCounter),
+        Counter is NewCounter + 1
+        ;
+        check_winning_nim_counter(T, Counter)
+    ).
+
+check_winning_nim(Game, WinningFlag) :-
+    mutarray_to_list(Game, List),
+    check_winning_nim_counter(List, Counter),
+    ( Counter =< 1 ->
+        WinningFlag = 1
+        ;
+        WinningFlag = 0
+    ).
+
+check_winning_tris(Game,WinningFlag):-
+    mutarray_length(Game,Length),
+    mutarray_get_zeroelems(Game,Length,Zeroelems),
+    mutarray_get(Game,1,Itm1),
+    mutarray_get(Game,2,Itm2),
+    mutarray_get(Game,3,Itm3),
+    mutarray_get(Game,4,Itm4),
+    mutarray_get(Game,5,Itm5),
+    mutarray_get(Game,6,Itm6),
+    mutarray_get(Game,7,Itm7),
+    mutarray_get(Game,8,Itm8),
+    mutarray_get(Game,9,Itm9),
+    CDiag is Itm1 + Itm5 + Itm9,
+    CADiag is Itm7 + Itm5 + Itm3,
+    CRow1 is Itm1 + Itm2 + Itm3,
+    CRow2 is Itm4 + Itm5 + Itm6,
+    CRow3 is Itm7 + Itm8 + Itm9,
+    CCol1 is Itm1 + Itm4 + Itm7, 
+    CCol2 is Itm2 + Itm5 + Itm8, 
+    CCol3 is Itm3 + Itm6 + Itm9, 
+    absolute_value(CDiag,Diag),
+    absolute_value(CADiag,ADiag),
+    absolute_value(CRow1,Row1),
+    absolute_value(CRow2,Row2),
+    absolute_value(CRow3,Row3),
+    absolute_value(CCol1,Col1),
+    absolute_value(CCol2,Col2),
+    absolute_value(CCol3,Col3),
+    peer_request(Peer),
+    (Zeroelems == [] -> WinningFlag = 1 ; true),
+    (Diag == 3 -> WinningFlag = 1 ; true),
+    (ADiag == 3 -> WinningFlag = 1; true),
+    (Row1 == 3 -> WinningFlag = 1; true),
+    (Row2 == 3 -> WinningFlag = 1 ; true),
+    (Row3 == 3 -> WinningFlag = 1 ; true),
+    (Col1 == 3 -> WinningFlag = 1 ; true),
+    (Col2 == 3 -> WinningFlag = 1 ; true),
+    (Col3 == 3 -> WinningFlag = 1 ; true).
+tris_instanceE(At):>
+    list_to_mutarray(At,Array),
+    check_winning_tris(Array,WinningFlag),
+    (\+ WinningFlag == 1 ->
+    mutarray_length(Array,Length),
+    best_first_tris(Array),
+    tris_best_state(ListTBS),
+    list_to_mutarray(ListTBS,TBS),
+    check_winning_tris(TBS,WinningFlagAfter),
+        (WinningFlagAfter == 1 ->
+            peer_request(Peer),
+            send_message_loss(Peer)            
+            ;
+            true
+        ),
+    tris_best_move(TBMM)
+    ;
+    TBMM = -1,
+    peer_request(Peer),
+    retract(frustration_tris(FT)),
+    NFT = FT+1,
+    assert(frustration_tris(NFT)),
+    send_message_victory(Peer)
+    ),
+    tris_back_port(Port),
+    socket_client_open('':Port, Stream, [type(text)]),
+    write(Stream, TBMM), write(Stream, '.'), nl(Stream),
+    close(Stream)
+    .
+
+nim_instanceE(At):>
+    list_to_mutarray(At,Array),
+    check_winning_nim_counter(At,Counter),
+    check_winning_nim(Array,WinningFlag),
+    
+    (\+ WinningFlag == 1 ->
+        mutarray_length(Array,Length),    
+        best_first_nim(Array),
+        nim_best_state(ListTBS),
+        list_to_mutarray(ListTBS,TBS),
+        check_winning_nim(TBS,WinningFlagAfter),
+        nim_best_move(TBMM),
+        write('The best move is at index '),
+        write(TBMM),nl
+    ;
+        (Counter == 1 ->
+            retract(frustration_nim(FT)),
+            NFT = FT+1,
+            assert(frustration_nim(NFT)),
+            TBMM = -1,
+            peer_request(Peer),
+            send_message_victory(Peer)
+            ;
+            retract(frustration_nim(FT)),
+            NFT = FT+1,
+            assert(frustration_nim(NFT)),
+            TBMM = -1,
+            peer_request(Peer),
+            send_message_loss(Peer)
+        )
+    ),
+    nim_back_port(Port),
+    socket_client_open('':Port, Stream, [type(text)]),
+    write(Stream, TBMM), write(Stream, '.'), nl(Stream),
+    close(Stream).
+
+
+    
+back_srv_trisE(Port):>
+    retract(tris_back_port(P)),
+    assert(tris_back_port(Port)).
+back_srv_nimE(Port):>
+    retract(nim_back_port(P)),
+    assert(nim_back_port(Port)).
+
+
+
+frustrated_tris:- 
+    frustration_tris(F),
+    frustration_tris_conveyed(M),
+    M==0, 
+    F > 3.
+
+frustrated_trisI:> peer_request(Peer),send_cleanup_msg(Peer),send_message_frustrated_tris(Peer),retract(frustration_tris_conveyed(M)),assert(frustration_tris_conveyed(1)),retract(cleanup(Cleanup)),assert(cleanup(1)).
+
+
+
+frustrated_nim:-
+    frustration_nim(F),
+    frustration_nim_conveyed(M),
+    M==0, 
+    F > 3.
+
+frustrated_nimI:> peer_request(Peer),send_cleanup_msg(Peer),send_message_frustrated_nim(Peer),retract(frustration_nim_conveyed(M)),assert(frustration_nim_conveyed(1)),retract(cleanup(Cleanup)),assert(cleanup(1)).
+
+
+
+frustrated_total:- 
+    frustration_tris_conveyed(M),
+    frustration_nim_conveyed(N),
+    frustration_total_conveyed(F),
+    M==1,
+    N==1,
+    F==0.
+
+
+frustrated_totalI:>peer_request(Peer),send_cleanup_msg(Peer),send_message_frustrated(Peer),retract(frustration_total_conveyed(M)),assert(frustration_total_conveyed(1)),retract(cleanup(Cleanup)),assert(cleanup(1)).
+

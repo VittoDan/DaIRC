@@ -1,0 +1,390 @@
+:- use_module(library(sockets)).
+:- use_module(library(process)).
+:- use_module(library(mutdict)).
+:- use_module(library(codesio)).
+:- use_module(library(system)).
+:- use_module(library(json)).
+:- use_module(library(lists)).
+:- use_module(library(file_systems)).
+
+:- dynamic user_dict/1.                                                 
+:- dynamic server_dict/1.  
+:- dynamic port_dict/1.
+:- dynamic file_back_dict/1.
+
+
+:- new_mutdict(PortDict),assert(user_dict(PortDict)).
+:- new_mutdict(PortDict),assert(server_dict(PortDict)).
+:- new_mutdict(PortDict),assert(port_dict(PortDict)).
+:- new_mutdict(PortDict),assert(file_back_dict(PortDict)).
+
+append_to_list_users(K,V):- retract(user_dict(Dict)) , mutdict_put(Dict,K,V), assert(user_dict(Dict)).
+append_to_list_servers(K,V):- retract(server_dict(Dict)) , mutdict_put(Dict,K,V), assert(server_dict(Dict)).
+append_to_list_file_back(K,V):- retract(file_back_dict(Dict)) , mutdict_put(Dict,K,V), assert(file_back_dict(Dict)).
+
+print_list([]):-true.                                                  
+print_list([H|T]):- write(H),write(','),print_list(T).                            
+
+int_to_atom(Int, Atom) :-
+    number_codes(Int, Codes),
+    atom_codes(Atom, Codes).
+parse_json_from_string(JSONString, JSONObject) :-   
+    atom_codes(JSONString, JSONCodes),                                                          
+    json_from_codes(JSONCodes, JSONObject).
+get_item(JSONObject, Item) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('item'=Item, Members).         
+get_peer(JSONObject, Peer) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('peer'=Peer, Members).                                                                                                           
+get_action(JSONObject, Action) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('action'=Action, Members).                                                                                                           
+get_type(JSONObject, Type) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('type'=Type, Members).                                                                                                          
+get_uname(JSONObject, Uname) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('uname'=Uname, Members).      
+get_sname(JSONObject, Sname) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('sname'=Sname, Members).                                                                                                           
+get_msg(JSONObject, Msg) :-                                                                                                     
+    JSONObject = json(Members),
+    member('msg'=Msg, Members).   
+get_port(JSONObject, Port) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('port'=Port, Members).   
+get_server(JSONObject, Server) :-                                                                                                           
+    JSONObject = json(Members),                                                                                                                    
+    member('server'=Server, Members).   
+get_bot(JSONObject,Bot) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('bot'=Bot, Members).   
+get_itm1(JSONObject,Itm1) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm1'=Itm1, Members).   
+get_itm2(JSONObject,Itm2) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm2'=Itm2, Members).   
+get_itm3(JSONObject,Itm3) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm3'=Itm3, Members).   
+get_itm4(JSONObject,Itm4) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm4'=Itm4, Members).   
+get_itm5(JSONObject,Itm5) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm5'=Itm5, Members).   
+get_itm6(JSONObject,Itm6) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm6'=Itm6, Members).   
+get_itm7(JSONObject,Itm7) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm7'=Itm7, Members).   
+get_itm8(JSONObject,Itm8) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm8'=Itm8, Members).  
+get_itm9(JSONObject,Itm9) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm9'=Itm9, Members).   
+get_itm10(JSONObject,Itm10) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm10'=Itm10, Members).  
+get_itm11(JSONObject,Itm11) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm11'=Itm11, Members).   
+get_itm12(JSONObject,Itm12) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm11'=Itm12, Members).   
+get_itm13(JSONObject,Itm13) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm13'=Itm13, Members).   
+get_itm14(JSONObject,Itm14) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm14'=Itm14, Members).   
+get_itm15(JSONObject,Itm15) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm15'=Itm15, Members).   
+get_itm16(JSONObject,Itm16) :-
+    JSONObject = json(Members),                                                                                                                    
+    member('itm16'=Itm16, Members).   
+
+    
+
+
+socket_readystate([],_):-false.
+socket_readystate([S|_],S):-true.
+socket_getready([],_):- false.
+socket_getready([S|_],S):- true.     
+socket_getready([S|K],Q):- socket_getready([K],Q).   
+
+socket_handler(Sockets):-
+    socket_select(Sockets,SReady,[],RReady,[],WReady,off),
+    (\+ socket_getready(SReady,Sk) ->
+        socket_handler(Sockets)
+        ;
+        socket_check_client_messages(SReady,Msg,S)
+    ),
+    socket_handler(Sockets).
+active_socket_handler:-
+    socket_server_open('':1337, Sk, [loopback(true), numeric_nodename(true), reuseaddr(true)]),
+    socket_handler([Sk]).
+read_line_till_EOL(RStream,Itm):-
+    read_line(RStream,CItem),
+    (\+ atom(Itm) ->
+        Itm=''
+        ;
+        true
+    ),
+    (\+ CItem == end_of_file  ->
+        atom_concat(Itm,'^',I1),
+        atom_codes(Out,CItem),
+        atom_concat(I1,Out,Back),
+        read_line_till_EOL(RStream,Back)
+        ;
+        true
+    ).
+socket_check_client_messages([],_,_):-true.
+
+send_message_connect_bot_srv(Target,Server):-
+    send(Target,send_message(connect(Server),Me)).
+
+send_message_tgt_cts(Target,Server):-
+    send(Target,send_message(connect(Server),Me)).
+
+send_message_tgt_fetch(Target,Port):- 
+    send(Target,send_message(fetch(Port),Me)).
+
+send_message_tgt_fetch_peer_req(Target,Port):- 
+    send(Target,send_message(fetch_peer_req(Port),Me)).
+
+send_message_tgt_fetch_srv(Target,Port):- 
+    send(Target,send_message(fetch_srv(Port),Me)).
+send_message_tgt_tris_back(Target,Port):-
+    send(Target,send_message(back_srv_tris(Port),Me)).
+send_message_tgt_nim_back(Target,Port):-
+    send(Target,send_message(back_srv_nim(Port),Me)).
+send_message_tgt_accept_req(Target):-
+    send(Target,send_message(accept_req,Me)).
+send_message_tgt_decline_req(Target):-
+    send(Target,send_message(decline_req,Me)).
+get_tris_list(It,L):-
+    get_itm1(It,Itm1),
+    get_itm2(It,Itm2),
+    get_itm3(It,Itm3),
+    get_itm4(It,Itm4),
+    get_itm5(It,Itm5),
+    get_itm6(It,Itm6),
+    get_itm7(It,Itm7),
+    get_itm8(It,Itm8),
+    get_itm9(It,Itm9),  
+    L = [Itm1,Itm2,Itm3,Itm4,Itm5,Itm6,Itm7,Itm8,Itm9].
+
+get_nim_list(It,L):-
+    get_itm1(It,Itm1),
+    get_itm2(It,Itm2),
+    get_itm3(It,Itm3),
+    get_itm4(It,Itm4),
+    get_itm5(It,Itm5),
+    get_itm6(It,Itm6),
+    get_itm7(It,Itm7),
+    get_itm8(It,Itm8),
+    get_itm9(It,Itm9),  
+    get_itm10(It,Itm10),
+    get_itm11(It,Itm11),
+    get_itm12(It,Itm12),
+    get_itm13(It,Itm13),
+    get_itm14(It,Itm14),
+    get_itm15(It,Itm15),
+    get_itm16(It,Itm16),  
+    L = [Itm1,Itm2,Itm3,Itm4,Itm5,Itm6,Itm7,Itm8,Itm9,Itm10,Itm11,Itm12,Itm13,Itm14,Itm15,Itm16].
+
+
+
+send_message_tris_item_bot(It,Target):-
+    send(Target,send_message(tris_instance(It),Me)).
+send_message_nim_item_bot(It,Target):-
+    send(Target,send_message(nim_instance(It),Me)).
+socket_check_client_messages([SocketToRead|Srest],Msg,L):-
+    agent(A),
+    socket_server_accept(SocketToRead,_,S,[type(text)]),
+    read(S, Msg),
+    parse_json_from_string(Msg, JSONObject),
+    get_action(JSONObject,J),
+        (J == add  ->
+            get_item(JSONObject,It),
+            get_type(It,Type),
+            get_uname(It,Uname),
+            user_dict(Udict),
+            mutdict_size(Udict,Size),
+            (\+ mutdict_get(Udict,Uname,Val) ->
+                create_new_user(Type,Uname),
+                append_to_list_users(Uname,S),
+                socket_handler([SocketToRead|Srest])
+                ;                
+                socket_handler([SocketToRead|Srest])
+            )
+            ;
+        J == create_server ->
+            get_item(JSONObject,It),
+            get_type(It,Type),
+            get_sname(It,Sname),
+            get_item(It,ItBot),
+            server_dict(SDict),
+            (\+ mutdict_get(SDict,Sname,Val) ->
+                create_new_server(Type,Sname),
+                socket_handler([SocketToRead|Srest])
+            ) 
+            ;
+        J == create_bot ->
+            get_item(JSONObject,It),
+            get_type(It,Type),
+            get_sname(It,Sname),
+            create_new_bot(Type),
+            atom_concat('server_',Sname,TSname),
+            sleep(5),
+            send_message_connect_bot_srv('bot_bot',TSname)
+        ;
+        J == server_list ->
+            server_dict(SD),
+            mutdict_keys(SD,SL),
+            write(S,SL),
+            flush_output(S),
+            socket_handler([SocketToRead|Srest])
+            ;
+        J == msg ->
+            get_item(JSONObject, It),
+            get_uname(It, Uname),
+            atom_concat('user_',Uname,Ufull),
+            get_msg(It, IncomingMsg),
+            atom_codes(IncomingMsg,IncomingMsgCodes),
+            send(Ufull,send_message(chat(IncomingMsgCodes),A)),
+            socket_handler([SocketToRead | Srest])
+        ;
+        J == connect_server ->
+            get_item(JSONObject,It),
+            get_uname(It,Uname),
+            get_server(It,Server),
+            atom_concat('server_',Server,OFS),
+            atom_concat('user_',Uname,Target),
+            send_message_tgt_cts(Target,OFS)
+        ;
+        J == fetch_messages ->
+             get_item(JSONObject,It),
+             get_uname(It,Uname),
+             atom_concat('user_',Uname,Target), 
+             socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+             send_message_tgt_fetch(Target,PortBackFetch),
+             socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+             read(SS,ListItems),
+             close(SS),
+             format(S,'\'{"action":"backmsgs","item":"~w"}\'',[ListItems]),
+             flush_output(S)
+        ;
+        J == fetch_peer_req ->
+             get_item(JSONObject,It),
+             get_uname(It,Uname),
+             atom_concat('user_',Uname,Target),
+             socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+             send_message_tgt_fetch_peer_req(Target,PortBackFetch),
+             socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+             read(SS,ListItems),
+             close(SS),
+             
+             (\+ ListItems == end_of_file ->
+                format(S,'\'{"action":"backpeer","item":"~w"}\'',[ListItems]),
+                flush_output(S)
+                ;
+                flush_output(S)
+             )
+        ;
+        J == connect_peer_req ->
+            get_item(JSONObject,It),
+            get_uname(It,Uname),
+            atom_concat('user_',Uname,Target),
+            get_peer(It,Peer),
+            send(Target,send_message(sender_start_connect_peer_request(Peer),A))
+        ;
+        J == user_list ->
+             get_item(JSONObject,It),
+             get_uname(It,Uname),
+             atom_concat('user_',Uname,Target),
+             socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+             send_message_tgt_fetch_srv(Target,PortBackFetch),
+             socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+             read(SS,ListItems),
+             close(SS),
+             format(S,'\'{"action":"usrlist","item":"~w"}\'',[ListItems]),
+             flush_output(S)
+             ;
+        J == accept_req -> 
+            get_item(JSONObject,It),
+            get_uname(It,Uname),
+            atom_concat('user_',Uname,Target),
+            send_message_tgt_accept_req(Target)
+        ;
+        J == decline_req -> 
+            get_item(JSONObject,It),
+            get_uname(It,Uname),
+            atom_concat('user_',Uname,Target),
+            send_message_tgt_decline_req(Target)
+        ;
+        J == tris_instance ->
+            socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+            send_message_tgt_tris_back('bot_bot',PortBackFetch),
+            get_item(JSONObject,It),
+            get_tris_list(It,L),
+            send_message_tris_item_bot(L,'bot_bot'),
+            socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+            read(SS,Answer),
+            close(SS),
+            (\+ Answer == -1 ->
+                format(S,'\'{"action":"tris_answer","item":"~w"}\'',Answer),
+                flush_output(S)
+                ;
+                true
+            )
+        ;
+        J == nim_instance ->
+            socket_server_open(PortBackFetch, ServerSocketBackFetch,[loopback(true), numeric_nodename(true), reuseaddr(true)]),
+            send_message_tgt_nim_back('bot_bot',PortBackFetch),
+            get_item(JSONObject,It),
+            get_nim_list(It,L),
+            send_message_nim_item_bot(L,'bot_bot'),
+            socket_server_accept(ServerSocketBackFetch,_,SS,[type(text)]),
+            read(SS,Answer),
+            close(SS),
+            (\+ Answer == -1 ->
+                format(S,'\'{"action":"nim_answer","item":"~w"}\'',Answer),
+                flush_output(S)
+                ;
+                true
+            )
+        ).
+
+
+create_new_user(T,U) :-
+    set_prolog_flag(double_quotes, atom),     
+    atom_concat('/home/ubuntu/DALI/src/agent_creation_trigger.sh ', T, O),
+    atom_concat(O, ' ', O2),
+    atom_concat(O2 ,U, O3),
+    process_create(path(sh), ['-c', [O3]], [wait(exit(0))]).
+
+create_new_server(T,Sname) :-    
+    append_to_list_servers(Sname,Sname),
+    set_prolog_flag(double_quotes, atom),     
+    atom_concat('/home/ubuntu/DALI/src/agent_creation_trigger.sh ', T, O),
+    atom_concat(O, ' ', O2),
+    atom_concat(O2 ,Sname, O3),
+    process_create(path(sh), ['-c', [O3]], [wait(exit(0))]).
+
+create_new_bot(T) :-
+    set_prolog_flag(double_quotes, atom),     
+    atom_concat('/home/ubuntu/DALI/src/agent_creation_trigger.sh ', T, O),
+    atom_concat(O, ' ', O2),
+    atom_concat(O2 ,'bot', O3),
+    process_create(path(sh), ['-c', [O3]], [wait(exit(0))]).
+
+
+

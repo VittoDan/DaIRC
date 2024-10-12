@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #a {
+            border-width: 0px 2px 2px 0px;
+            border-style: solid;  
+        }
+        #b {
+            border-width: 0px 0px 2px 0px;
+            border-style: solid;  
+        }
+        #c {
+            border-width: 0px 0px 2px 2px;
+            border-style: solid;  
+        }
+        #v {
+            border-width: 0px 2px 0px 0px;
+            border-style: solid;  
+        }
+        #q {
+            border-width: 0px 0px 0px 2px;
+            border-style: solid;  
+        }
+        .center{
+            text-align: center;
+        }
+    </style> 
+</head>
+<body>
+    <!-- <canvas id="myCanvas"></canvas> -->
+    <div style="width:20%;">
+        <div style="display: grid; grid-template-columns:33% 33% 33%;">
+            <div id="a" class="torect center">&nbsp;</div>
+            <div id="b" class="torect center">&nbsp;</div>
+            <div id="c" class="torect center">&nbsp;</div>
+            <div id="a" class="torect center">&nbsp;</div>
+            <div id="b" class="torect center">&nbsp;</div>
+            <div id="c" class="torect center">&nbsp;</div>
+            <div id="v" class="torect center">&nbsp;</div>
+            <div class="torect center">&nbsp;</div>
+            <div id="q" class="torect center">&nbsp;</div>      
+        </div>
+        </div>
+</body>
+<script>
+    let toggle = true;
+        // Function to create an empty 2D array
+    function create2DArray(rows, cols) {
+        // Create an array with the specified number of rows
+        let array = new Array(rows);
+        
+        // Fill each row with an array of the specified number of columns, initialized to a default value (e.g., null)
+        for (let i = 0; i < rows; i++) {
+            array[i] = new Array(cols).fill(null);
+        }
+        
+        return array;
+    }
+
+    // Example usage:
+    let numRows = 3;
+    let numCols = 3;
+    let my2DArray = [['0','0','0'],['0','0','0'],['0','0','0']];
+    let botclick= false;
+    Array.from(document.getElementsByClassName("torect")).forEach((element,index) => {
+
+        element.addEventListener("click", ()=>{
+            const row=Math.floor(index/3)
+            const col=index%3
+            if(element.innerHTML!="&nbsp;") return;
+            element.innerHTML=toggle?"X":"O";
+            my2DArray[row][col]=toggle?'1':'-1'
+            toggle=!toggle
+            console.log(checkDiag(my2DArray))
+            console.log(checkAntiDiag(my2DArray))
+            if (checkDiag(my2DArray)!='0'){
+                Array.from(document.getElementsByClassName("torect"))[0].innerHTML='\\'
+                Array.from(document.getElementsByClassName("torect"))[4].innerHTML='\\'
+                Array.from(document.getElementsByClassName("torect"))[8].innerHTML='\\'
+            }
+            if (checkAntiDiag(my2DArray)!='0'){
+                Array.from(document.getElementsByClassName("torect"))[6].innerHTML='/'
+                Array.from(document.getElementsByClassName("torect"))[4].innerHTML='/'
+                Array.from(document.getElementsByClassName("torect"))[2].innerHTML='/' 
+            }   
+            const cc=checkCols(my2DArray)
+            const cr=checkRows(my2DArray)
+            switch(cc){
+                case 0:
+                    Array.from(document.getElementsByClassName("torect"))[0].innerHTML='|'
+                    Array.from(document.getElementsByClassName("torect"))[3].innerHTML='|'
+                    Array.from(document.getElementsByClassName("torect"))[6].innerHTML='|'       
+                    break;
+                case 1:
+                    Array.from(document.getElementsByClassName("torect"))[1].innerHTML='|'
+                    Array.from(document.getElementsByClassName("torect"))[4].innerHTML='|'
+                    Array.from(document.getElementsByClassName("torect"))[7].innerHTML='|'       
+                    break;
+                case 2:
+                    Array.from(document.getElementsByClassName("torect"))[2].innerHTML='|'
+                    Array.from(document.getElementsByClassName("torect"))[5].innerHTML='|'
+                    Array.from(document.getElementsByClassName("torect"))[8].innerHTML='|'       
+                    break;                
+            }
+            switch(cr){
+                case 0:
+                    Array.from(document.getElementsByClassName("torect"))[0].innerHTML='-'
+                    Array.from(document.getElementsByClassName("torect"))[1].innerHTML='-'
+                    Array.from(document.getElementsByClassName("torect"))[2].innerHTML='-'       
+                    break;
+                case 1:
+                    Array.from(document.getElementsByClassName("torect"))[3].innerHTML='-'
+                    Array.from(document.getElementsByClassName("torect"))[4].innerHTML='-'
+                    Array.from(document.getElementsByClassName("torect"))[5].innerHTML='-'       
+                    break;
+                case 2:
+                    Array.from(document.getElementsByClassName("torect"))[6].innerHTML='-'
+                    Array.from(document.getElementsByClassName("torect"))[7].innerHTML='-'
+                    Array.from(document.getElementsByClassName("torect"))[8].innerHTML='-'       
+                    break;                
+            }
+            if(!botclick) {
+                const msg = '{"action":"tris_back_from_iframe","item":[[' +my2DArray[0]+'],['+my2DArray[1]+'],['+my2DArray[2]+ ']]}';
+                window.parent.postMessage(msg, '*');
+            }else{
+                botclick = false;
+            }
+        });
+    })
+    function checkDiag(arr) {
+        if(parseInt(arr[0][0])+parseInt(arr[1][1])+parseInt(arr[2][2])==3||parseInt(arr[0][0])+parseInt(arr[1][1])+parseInt(arr[2][2])==-3) return 1
+        return 0
+    }
+    function checkAntiDiag(arr) {
+        if(parseInt(arr[2][0])+parseInt(arr[1][1])+parseInt(arr[0][2])==3||parseInt(arr[2][0])+parseInt(arr[1][1])+parseInt(arr[0][2])==-3) return 1
+        return 0
+    }
+    function checkRows(arr){
+        for(let i = 0; i <3; i++){
+            if(parseInt(arr[i][0])+parseInt(arr[i][1])+parseInt(arr[i][2])==3||parseInt(arr[i][0])+parseInt(arr[i][1])+parseInt(arr[i][2])==-3) return i
+        }
+        return -1
+    }
+    function checkCols(arr){
+        for(let i = 0; i <3; i++){
+            if(parseInt(arr[0][i])+parseInt(arr[1][i])+parseInt(arr[2][i])==3||parseInt(arr[0][i])+parseInt(arr[1][i])+parseInt(arr[2][i])==-3) return i
+        }
+        return -1
+    }
+    window.addEventListener('message', function(event) {
+        if(event.data["action"]=="tris_answer"){
+            console.log(document.getElementsByClassName("torect"));
+            botclick = true;
+            document.getElementsByClassName("torect")[parseInt(event.data["item"])-1].click();
+        }
+    });
+
+    </script>
+
+</html>

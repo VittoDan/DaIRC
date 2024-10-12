@@ -1,0 +1,9 @@
+told(Ag,inform(connect_peer_req(Peer,Sender)),70):-
+    messageA(Peer,inform(connect_peer_req(Peer,Sender),Me)),
+    messageA(Sender,inform(connect_peer_req(Sender,Peer),Me)),!.
+
+told(Ag,disconfirm(connect_peer_req(Peer,A))):-
+    messageA(Peer,disconfirm(connect_peer_req(Peer,A),Me)),!.
+
+told(Ag,confirm(connect_peer_req(Peer,A)),200):-
+    messageA(Peer,confirm(connect_peer_req(Peer,A),Me)),!.    

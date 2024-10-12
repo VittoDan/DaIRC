@@ -2,7 +2,7 @@ FROM ubuntu:latest
 ARG sicstustarball=https://sicstus.sics.se/sicstus/products4/sicstus/4.9.0/binaries/linux/sp-4.9.0-x86_64-linux-glibc2.28.tar.gz
 WORKDIR /home/ubuntu
 COPY ./dockerconfig/installcachetoinject.cache /home/ubuntu/install.cache
-RUN apt-get update && apt-get install -y tmux vim wget gzip nodejs npm inetutils-ping
+RUN apt-get update && apt-get install -y tmux vim lsof wget gzip nodejs npm inetutils-ping
 RUN npm i -g http-server
 RUN wget $sicstustarball && \
     mkdir sicstus && \

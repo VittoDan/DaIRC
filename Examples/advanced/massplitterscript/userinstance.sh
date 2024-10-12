@@ -1,4 +1,5 @@
 #!/bin/sh
+# Script for launching user interaction script 
 WAIT="ping -c 4 127.0.0.1"
 SICSTUS_HOME=/usr/local/sicstus4.9.0
 PROLOG="$SICSTUS_HOME/bin/sicstus"

@@ -117,7 +117,6 @@ call_cfp(var_A,var_C,var_Ag):-clause(agent(var_AgI),var__),
 
 call_propose(var_A,var_C,var_Ag):-clause(agent(var_AgI),var__),
                                   clause(ext_agent(var_Ag,_,var_Ontology,_),_),
-                                  asserisci_ontologia(var_Ag,var_Ontology,var_A),
                                   once(call_meta_execute_propose(var_A,var_C,var_Ag)),
                                   a(message(var_Ag,accept_proposal(var_A,[],var_AgI))),
                                   retractall(ext_agent(var_Ag,_,var_Ontology,_)).

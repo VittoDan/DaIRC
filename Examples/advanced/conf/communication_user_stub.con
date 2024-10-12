@@ -1,0 +1,16 @@
+told(Ag,inform(connect_peer_req(Peer,Sender)),70):-
+    write('told(Ag,inform(connect_peer_req(Peer,Sender)),70) '),
+    write(Peer),
+    send(Peer,send_message(peer_to_connect(Sender),Peer)),
+    !.
+
+told(Ag,disconfirm(connect_peer_req(Peer,Sender))):-
+    send(Peer,send_message(req_declined_receiver,Sender)),
+    !.
+told(Ag,confirm(connect_peer_req(Peer,Sender),200)):-
+    agent(A),
+    write('told(Ag,confirm(connect_peer_req(Peer,Sender),200))'),nl,
+    write('Peer'),write(Peer),nl,
+    write('Sender'),write(Sender),nl,
+    send(A,send_message(req_accept_receiver(Peer),A)),
+    !.

@@ -1,108 +1,284 @@
 <html>
 
 <head>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.29.2/cytoscape.min.js"
-		integrity="sha512-yi5TwB0WBpzqlJXNLURNMtpFXJt4yxJhkOG8yqkVQYWhfMkAoDF93rZ/KjfoN1gADGr5uKXvr5/Bw6CC03YWpA=="
-		crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
 </head>
 
 <body>
-	<div id="test" style="display:flex;"></div>
-	<div id="item" style="width: 20em; height: 20em;"></div>
-	<div id="test" style="display:flex;">
-		<button id="add">+</button>
-		<button id="add2">+</button>
-		<button id="addServer">Server</button>
-		<button id="addUser">User</button>
-
+	<div id="container">
+		
+		<div id="serverBarContainer"><button id="get_servers">Refresh servers</button><div id="serverBar"></div></div>
+		<div id="chatbox"></div>
+		<div id="userBarContainer"><button id="get_users">Refresh users</button><div id="userBar"></div></div>
+		<div id="chatBar">		
+			<input id="chatBox"/>
+			<button id="sendMsg">SEND</button>
+		</div>
 	</div>
 </body>
 
 </html>
 <script>
-	var cy = cytoscape({
-		container: document.getElementById('item'), // container to render in
-		style: [ // the stylesheet for the graph
-			{
-				selector: 'node',
-				style: {
-					'label': 'data(label)',
-				}
+
+	function getCookie (name) {
+		let value = `; ${document.cookie}`;
+		let parts = value.split(`; ${name}=`);
+		if (parts.length === 2) return parts.pop().split(';').shift();
+	}
+	function escapeString(str) {
+    return str.replace(/['"\\]/g, '\\\$&');
+	}
+	if (window.Worker) {
+	window.addEventListener('message', function(event) {
+		try{
+			const item=JSON.parse(event.data);
+			if(item["action"]=="tris_back_from_iframe"){
+				const eventData=item["item"]
+				let itemStr=''
+				eventData.forEach((e,i)=>{
+					e.forEach((item,j)=>{
+						const ind=(i*3)+(j+1);
+						console.log(ind+":"+item);
+						itemStr+='\"itm'+ind+'\":\"'+item+'\"';
+						itemStr+=ind<9?',':'';
+					});
+				});
+				console.log('\'{ \"action\": \"tris_instance\",  \"item\":{'+itemStr+'}}\'');
+				return_socket.send('\'{ \"action\": \"tris_instance\",  \"item\":{'+itemStr+'}}\'');
+			}else if(item["action"]=="nim_back_from_iframe"){
+				const eventData=item["item"]
+				let itemStr=''
+				eventData.forEach((e,i)=>{
+					e.forEach((item,j)=>{
+						const ind=(i*4)+(j+1);
+						console.log(ind+":"+item);
+						itemStr+='\"itm'+ind+'\":\"'+item+'\"';
+						itemStr+=ind<16?',':'';
+					});
+				});
+				console.log('\'{ \"action\": \"nim_instance\",  \"item\":{'+itemStr+'}}\'');
+				return_socket.send('\'{ \"action\": \"nim_instance\",  \"item\":{'+itemStr+'}}\'');
 			}
-		],
-	});
-	let options = {
-		name: 'random',
-		fit: true, // whether to fit to viewport
-		padding: 30, // fit padding
-		boundingBox: undefined, // constrain layout bounds; { x1, y1, x2, y2 } or { x1, y1, w, h }
-		animate: false, // whether to transition the node positions
-		animationDuration: 500, // duration of animation in ms if enabled
-		animationEasing: undefined, // easing of animation if enabled
-		animateFilter: function (node, i) { return true; }, // a function that determines whether the node should be animated.  All nodes animated by default on animate enabled.  Non-animated nodes are positioned immediately when the layout starts
-		ready: undefined, // callback on layoutready
-		stop: undefined, // callback on layoutstop
-		transform: function (node, position) { return position; } // transform a given node position. Useful for changing flow direction in discrete layouts 
-	};
+		}catch(e){
+			console.log(event.data);
+		}
+	});	
+	const queryString = window.location.search;
+
+	const urlParams = new URLSearchParams(queryString);
+	
 
 
-	var PIDS = []
-	const socket = new WebSocket("ws://localhost:9090");
 	const return_socket = new WebSocket("ws://localhost:9091");
 	
-	socket.addEventListener("message", (event) => {
-
-		if (event.data) {
-			let JSONData = JSON.parse(event.data);
-			if (!JSONData.action) {
-				if (PIDS.includes(JSONData.PID)) {
-				} else {
-					PIDS.push(JSONData.PID);
-					cy.add({
-						group: 'nodes',
-
-						data: { id: JSONData.PID, label: JSONData.PID }
-					});
-
-					cy.layout(options).run();
-
+	document.getElementById("get_servers").addEventListener("click",()=>{
+		return_socket.send('\'{ \"action\": \"server_list\"}\'')			
+	});
+	document.getElementById("get_users").addEventListener("click",()=>{
+		console.log(urlParams.get('user'))
+		return_socket.send('\'{ \"action\": \"user_list\",  \"item\":{\"uname\":\"'+urlParams.get('user')+'\" }}\'')			
+	});
+	return_socket.addEventListener("message",(event)=>{
+		try{
+			const item=JSON.parse(event.data.slice(1,-1));
+			if(item["action"]=="backmsgs"){
+				const temp = item["item"].slice(2,-2).split(',');
+				const itemvars=temp.map(x => x.replace('[', '').replace(']', ''));
+				console.log(itemvars)
+				const s=String.fromCharCode.apply(null, itemvars)
+				console.log(s)
+				console.log(s.trim())
+				if(s == "!clear"){
+					document.getElementById('chatbox').innerHTML = ""
+				}else if(s == "!tris"){
+					document.getElementById('chatbox').innerHTML = ""
+					document.getElementById('chatbox').innerHTML += '<div><iframe src="tris.html" id="iframetris" style="width: 100%; height: 100px; border: none;"></iframe></div>'+"<br>";
+				}else if(s == "!nim"){
+					document.getElementById('chatbox').innerHTML = ""
+					document.getElementById('chatbox').innerHTML += '<div><iframe src="nim.html" id="iframenim" style="width: 100%; height: 250px; border: none;"></iframe></div>'+"<br>";
 				}
+				else{
+					const fstr= s.replace("var_","");
+					if(fstr.trim().length > 1)document.getElementById("chatbox").innerHTML+=fstr+"<br>";				
+				}
+			}else if(item["action"]=="usrlist"){
+				const userBar=document.getElementById("userBar")
+				userBar.innerHTML="";
+				const itemvars=item["item"].slice(1,-1).split(',');
+				itemvars.forEach((element)=>{
+					const newEl= document.createElement("button");
+					newEl.innerHTML=element;
+					newEl.setAttribute('id',element);	
+						if(urlParams.get('user')){
+						newEl.addEventListener('click',()=>{
+							document.cookie = "srv="+element+"; path=/;";
+							if((return_socket.readyState === 1)){
+								let msgUname= '\'{ \"action\": \"connect_peer_req\", \"item\":{\"uname\":\"'+urlParams.get('user')+'\",\"peer\":\"'+element+'\" }}\''
+								return_socket.send(msgUname); 
+							}
+						});
+						newEl.innerHTML=element;
+					}
+					userBar.appendChild(newEl)
+				});
+			}else if(item["action"]=="backpeer"){
+				if (window.confirm("Nuova richiesta peer to peer da utente, vuoi accettare?")) {
+					return_socket.send('\'{ \"action\": \"accept_req\",  \"item\":{\"uname\":\"'+urlParams.get('user')+'\",\"peer\":\"'+item["item"]+'\" }}\'')			
+				}else{
+					return_socket.send('\'{ \"action\": \"decline_req\",  \"item\":{\"uname\":\"'+urlParams.get('user')+'\",\"peer\":\"'+item["item"]+'\"  }}\'')			
+				}
+
+			}else if(item["action"]=="tris_answer"){
+					console.log("And the tris item is:");
+					console.log(item["item"]);
+					document.getElementById("iframetris").contentWindow.postMessage(item, '*');
+			}else if(item["action"]=="nim_answer"){
+					console.log("And the nim item is:");
+					console.log(item["item"]);
+					document.getElementById("iframenim").contentWindow.postMessage(item, '*');
 			}
-
-		}
-		//document.getElementById("test").innerHTML+=event.data + "<br>";
-	});
-
-	document.getElementById("add").addEventListener("click", () => {
-		let msg = '\'{ \"action\": \"add\", \"item\":\"agentType1\" }\''
-	
-		//socket.send(JSON.stringify(msg));
-		return_socket.send(msg);
-
-	});
-	document.getElementById("add2").addEventListener("click", () => {
-		let msg = '\'{ \"action\": \"add\", \"item\":\"agentType2\" }\''
-	
-		//socket.send(JSON.stringify(msg));
-		return_socket.send(msg);
-	});
-	document.getElementById("addServer").addEventListener("click", () => {
-		let msg = '\'{ \"action\": \"add\", \"item\":\"server\" }\''
+		}catch (e){
+		console.log(event.data);
 		
-		//socket.send(JSON.stringify(msg));
-		return_socket.send(msg);
-
+		const newstr = event.data.replace(/[\[\]']+/g,'');
+		const arr=newstr.split(',');
+		const serverBar=document.getElementById("serverBar");
+		serverBar.innerHTML="";
+		arr.forEach(element => {
+			const newEl= document.createElement("button");
+			newEl.innerHTML=element;
+			newEl.setAttribute('id',element);	
+			if(urlParams.get('user')){
+					newEl.addEventListener('click',()=>{
+						document.cookie = "srv="+element+"; path=/;";
+						console.log('test');
+						if((return_socket.readyState === 1)){
+							let msgUname= '\'{ \"action\": \"connect_server\", \"item\":{\"uname\":\"'+urlParams.get('user')+'\",\"server\":\"'+element+'\" }}\''
+							return_socket.send(msgUname); 
+						}
+					});
+					newEl.innerHTML=element;
+			}
+			serverBar.appendChild(newEl)
+		});
+		}
 	});
-	document.getElementById("addUser").addEventListener("click", () => {
-		let msg = '\'{ \"action\": \"notAdd\", \"item\":\"user\" }\''
 	
-		//socket.send(JSON.stringify(msg));
-		return_socket.send(msg);
+	if(urlParams.get('user')){
+			return_socket.addEventListener('open', (ev)=>{
+				let msgUname= '\'{ \"action\": \"add\", \"item\":{\"type\":\"user\",\"uname\":\"'+urlParams.get('user')+'\" }}\''
+				console.log(msgUname);
+				return_socket.send(msgUname); 
+				const fetcherMsg= new Worker("js/msgfetcher.js");
+				const peerReqChecker= new Worker("js/peer_req_check.js");
+				fetcherMsg.postMessage(urlParams.get('user'));
+				fetcherMsg.addEventListener("message",(e)=>{
+				 	return_socket.send(e.data)
+				});
+				peerReqChecker.postMessage(urlParams.get('user'));
+				peerReqChecker.addEventListener("message",(e)=>{
+				 	return_socket.send(e.data)
+				});
+
+		});
+	}
+	if(urlParams.get('servername')){
+		return_socket.addEventListener('open', (ev)=>{			
+			const botparam=urlParams.get('bot')!=null?urlParams.get('bot'):'false';
+			let msgUname= '\'{ \"action\": \"create_server\", \"item\":{\"type\":\"server\",\"sname\":\"'+urlParams.get('servername')+'\",\"item\":{\"type\":\"bot\",\"bot\":\"'+botparam+'\" }}}\'';
+			return_socket.send(msgUname); 
+			document.body.innerHTML="SERVER "+urlParams.get('servername') +" CREATED <br>"
+			document.body.innerHTML+="<button id='addBot'>add bot</button> "
+			document.getElementById("addBot").addEventListener("click", ()=>{
+				let msgUname= '\'{ \"action\": \"create_bot\", \"item\":{\"type\":\"bot\",\"sname\":\"'+urlParams.get('servername')+'\"}}\'';
+				return_socket.send(msgUname); 
+				document.getElementById("addBot").disabled = true;
+			});
+		})
+	}
+
+	 document.getElementById("sendMsg").addEventListener("click", () => {
+		if(getCookie("srv") && urlParams.get('user')){
+			if(document.getElementById("chatBox").value){
+				let payload= document.getElementById("chatBox").value
+	 			let msg = '\'{ \"action\": \"msg\", \"item\":{\"uname\":\"'+urlParams.get('user')+'\",\"msg\":\"'+escapeString(payload)+'"} }\''	
+				console.log(msg);
+	 			return_socket.send(msg);
+			}
+		}
 	});
+}
 </script>
 
 <style>
-	.gridsplit {
-		width: 100%;
+button {
+  align-items: center;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: transparent 0 0 0 3px,rgba(18, 18, 18, .1) 0 6px 20px;
+  box-sizing: border-box;
+  color: #121212;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1 1 auto;
+  font-family: Inter,sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  justify-content: center;
+  line-height: 0.2;
+  margin: 0;
+  outline: none;
+  padding: 1rem 1.2rem;
+  text-align: center;
+  text-decoration: none;
+  transition: box-shadow .2s,-webkit-box-shadow .2s;
+  white-space: nowrap;
+  border: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  margin:2px;
+}
+	button:hover {
+  		box-shadow: #121212 0 0 0 3px, transparent 0 0 0 0;
+	}
+	#serverBarContainer, #userBarContainer{
+		margin: 0px auto;
+	}
+	#container{
+		display:grid;
+		grid-template-rows: 90% 10%;
+		grid-template-columns: 20% 60% 20%;
+  		height: 100%;
+	}
+
+	#serverBar{
+		display: flex;
+		flex-direction: column;
+		min-width:20vh;
+	}
+	#userBar{
+		display: flex;
+		flex-direction: column;
+		min-width:20vh;
+	}
+	#chatBar {
+		display: flex;
+		align-self: flex-end;
+		flex-direction: row;
+		
+		grid-column-start: 1;
+		grid-column-end: span 3;
+	}
+	#chatBar > input {
+		align-self: stretch;
+		flex: 20;
+	}
+	#chatbox{
+		overflow-y: scroll;
+	}
+	input{
+		border-radius: 50px;
+		border: gray 1px solid;
 	}
 </style>
