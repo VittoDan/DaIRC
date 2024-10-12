@@ -29,11 +29,11 @@ Tmux is a necessity in this project since every agent creation implies the creat
 
 Here i am going to list some useful commands and macros to operate in the tmux environment.
 
-- <Ctrl>+b followed by w: opens the dashboard of the terminal instances, useful to navigate between agents' windows; you can navigate such window by pressing up and down and pressing enter will get to the highlighted terminal 
+- Ctrl+b followed by w: opens the dashboard of the terminal instances, useful to navigate between agents' windows; you can navigate such window by pressing up and down and pressing enter will get to the highlighted terminal 
 
-- <Ctrl>+b followed by an arrow key: will focus a new terminal panel in the current terminal window
+- Ctrl+b followed by an arrow key: will focus a new terminal panel in the current terminal window
 
-- <Ctrl>+b followed by c: opens a new terminal window with a bash prompt, very useful for checking... welp... everything :D from processes to files' creation to manipulating stuff around the container; for instance by typing `tmux kill-session` the whole container will shut off but every command goes, from `top` if you want to check running processes to even `apt` commands 
+- Ctrl+b followed by c: opens a new terminal window with a bash prompt, very useful for checking... welp... everything :D from processes to files' creation to manipulating stuff around the container; for instance by typing `tmux kill-session` the whole container will shut off but every command goes, from `top` if you want to check running processes to even `apt` commands 
 
 
 For more technical details there is a pdf in the root of this project (in italian) explaining some of the mechanisms in here from a high level standpoint.
