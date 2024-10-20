@@ -166,5 +166,5 @@ P.S
 In the project itself there might be some files that don't quite fit the project itself, those were some fun (although extremely frustrating) experiments that i carried out in the attempt to not rely on the LINDA message broker for communication with the web part (which is now handled with the sockets library of SICStus prolog which i invite the reader of this readme to check out).
 
 
-
+To comply with the apache license the project is a fork of DALI itself with the modifications visible on the branch of this repository  [DaIRCModifications](https://github.com/VittoDan/DALI/tree/origin/DaIRCModifications)
 
